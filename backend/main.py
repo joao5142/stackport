@@ -51,10 +51,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="StackPort", docs_url="/api/docs", lifespan=lifespan)
 
-# Sem origens declaradas nao ha CORS: a UI chama /api na propria origem, e o
-# servidor de desenvolvimento do vite faz proxy. Liberar para qualquer site daria
-# a qualquer aba aberta no navegador acesso de leitura e escrita a esta API, que
-# nao tem autenticacao.
+# With no origins declared there is no CORS: the UI calls /api on its own origin,
+# and the vite dev server proxies. Opening it to any site would give every tab in
+# the browser read and write access to this API, which has no authentication.
 if STACKPORT_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
