@@ -160,14 +160,29 @@ ui_dist = os.path.join(os.path.dirname(__file__), "..", "ui", "dist")
 if os.path.isdir(ui_dist):
     app.mount("/assets", StaticFiles(directory=os.path.join(ui_dist, "assets")), name="assets")
 
+    ui_root = os.path.realpath(ui_dist)
+
+    def _resolve_under_root(path: str) -> str | None:
+        """Resolve path inside the UI build, or None if it escapes.
+
+        The ASGI server percent-decodes the request path and does not normalize
+        it, so `..` and `%2e%2e` arrive intact. realpath before comparing also
+        covers symlinks pointing outside the build.
+        """
+        candidate = os.path.realpath(os.path.join(ui_root, path))
+        if candidate != ui_root and not candidate.startswith(ui_root + os.sep):
+            return None
+        return candidate
+
     @app.get("/{path:path}")
     def spa_fallback(path: str):
         # Try to serve the file directly
-        file_path = os.path.join(ui_dist, path)
-        if path and os.path.isfile(file_path):
-            return FileResponse(file_path)
+        if path:
+            file_path = _resolve_under_root(path)
+            if file_path and os.path.isfile(file_path):
+                return FileResponse(file_path)
         # SPA fallback: return index.html
-        return FileResponse(os.path.join(ui_dist, "index.html"))
+        return FileResponse(os.path.join(ui_root, "index.html"))
 
 
 def cli():
