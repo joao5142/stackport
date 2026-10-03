@@ -26,6 +26,11 @@ STACKPORT_SERVICES: str = os.environ.get(
     "ecr,elasticache,glue,athena,apigateway,firehose,cognito-idp,cognito-identity,"
     "elasticmapreduce,elasticloadbalancing,elasticfilesystem,cloudfront,appsync",
 )
+# Origens autorizadas a chamar a API de outro site. A UI e servida por esta
+# mesma aplicacao, entao o uso normal nao precisa de nenhuma. "*" libera tudo.
+STACKPORT_CORS_ORIGINS: list[str] = [
+    o.strip() for o in os.environ.get("STACKPORT_CORS_ORIGINS", "").split(",") if o.strip()
+]
 LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 # Probe and cache configuration
