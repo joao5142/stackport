@@ -316,9 +316,12 @@ class EndpointStore:
         Args:
             endpoint_name_or_url: Endpoint name, direct URL, or None
 
+        Only configured names resolve. A caller-supplied URL is not honoured:
+        every route takes this value from the query string, so passing it through
+        would let any caller point the server at a host of their choosing.
+
         Returns:
             - If None: returns default URL
-            - If starts with http:// or https://: returns as-is (direct URL)
             - Otherwise: looks up name and returns URL, or default if not found
         """
         with self._lock:
@@ -328,10 +331,6 @@ class EndpointStore:
             # None → default
             if endpoint_name_or_url is None:
                 return self.get_default_url()
-
-            # Direct URL passthrough
-            if endpoint_name_or_url.startswith("http://") or endpoint_name_or_url.startswith("https://"):
-                return endpoint_name_or_url
 
             # Look up by name
             entry = self._config["endpoints"].get(endpoint_name_or_url)
@@ -361,9 +360,6 @@ class EndpointStore:
                     return entry["url"], entry.get("region")
                 return None, None
 
-            if endpoint_name_or_url.startswith("http://") or endpoint_name_or_url.startswith("https://"):
-                return endpoint_name_or_url, None
-
             entry = self._config["endpoints"].get(endpoint_name_or_url)
             if entry:
                 return entry["url"], entry.get("region")
@@ -387,9 +383,6 @@ class EndpointStore:
             if endpoint_name_or_url is None:
                 default_name = self._config["default"]
                 return self._config["endpoints"].get(default_name)
-
-            if endpoint_name_or_url.startswith("http://") or endpoint_name_or_url.startswith("https://"):
-                return None
 
             entry = self._config["endpoints"].get(endpoint_name_or_url)
             if entry:

@@ -14,6 +14,36 @@ def client():
     return TestClient(app)
 
 
+# Um nome tem de estar configurado para ser enderecavel: uma URL vinda da query
+# string nao resolve mais, senao qualquer chamador escolheria o destino.
+_NAMED_ENDPOINTS = {
+    "other": "http://other:4566",
+    "awsreal": "https://s3.amazonaws.com",
+    "epa": "http://endpoint-a:4566",
+    "epb": "http://endpoint-b:4566",
+}
+
+
+@pytest.fixture(autouse=True)
+def named_endpoints():
+    from backend.config import endpoint_store
+
+    entries = endpoint_store._config["endpoints"]
+    for name, url in _NAMED_ENDPOINTS.items():
+        entries[name] = {
+            "url": url,
+            "source": "user",
+            "region": None,
+            "auth_type": "default",
+            "auth_profile": None,
+            "auth_access_key_id": None,
+            "auth_secret_access_key": None,
+        }
+    yield
+    for name in _NAMED_ENDPOINTS:
+        entries.pop(name, None)
+
+
 class TestGetEndpointUrlDependency:
     """Test the get_endpoint_url FastAPI dependency."""
 
@@ -38,17 +68,13 @@ class TestGetEndpointUrlDependency:
             assert result == "http://staging:4566"
             mock_store.resolve.assert_called_once_with("staging")
 
-    def test_passes_through_direct_url(self):
+    def test_direct_url_is_not_honoured(self):
+        """A URL in the query string must not pick the destination (SSRF)."""
         with patch("backend.routes.common.endpoint_store") as mock_store:
-            mock_store.resolve.return_value = "http://custom:9999"
+            mock_store.resolve.return_value = "http://localhost:4566"
             result = get_endpoint_url(endpoint="http://custom:9999")
-            assert result == "http://custom:9999"
-
-    def test_passes_through_https_url(self):
-        with patch("backend.routes.common.endpoint_store") as mock_store:
-            mock_store.resolve.return_value = "https://s3.amazonaws.com"
-            result = get_endpoint_url(endpoint="https://s3.amazonaws.com")
-            assert result == "https://s3.amazonaws.com"
+            assert result == "http://localhost:4566"
+            mock_store.resolve.assert_called_once_with("http://custom:9999")
 
     def test_falls_back_to_default_for_invalid_name(self):
         with patch("backend.routes.common.endpoint_store") as mock_store:
@@ -74,14 +100,14 @@ class TestHealthEndpointAwareness:
         assert "connection_type" in data
 
     def test_health_with_endpoint_param(self, client):
-        resp = client.get("/api/health?endpoint=http://other:4566")
+        resp = client.get("/api/health?endpoint=other")
         assert resp.status_code == 200
         data = resp.json()
         assert data["endpoint_url"] == "http://other:4566"
         assert data["connection_type"] == "local"
 
     def test_health_aws_connection_type(self, client):
-        resp = client.get("/api/health?endpoint=https://s3.amazonaws.com")
+        resp = client.get("/api/health?endpoint=awsreal")
         assert resp.status_code == 200
         data = resp.json()
         assert data["connection_type"] == "aws"
@@ -93,7 +119,7 @@ class TestStatsEndpointParam:
     @patch("backend.routes.stats._probe_service")
     def test_stats_uses_endpoint_param(self, mock_probe, client):
         mock_probe.return_value = ("s3", {"status": "available", "resources": {"buckets": 3}})
-        resp = client.get("/api/stats?endpoint=http://other:4566")
+        resp = client.get("/api/stats?endpoint=other")
         assert resp.status_code == 200
         calls = [c for c in mock_probe.call_args_list if c[0][1] == "http://other:4566"]
         assert len(calls) > 0
@@ -108,7 +134,7 @@ class TestCacheKeyIsolation:
         mock_cache.get.return_value = None
         mock_probe.return_value = ("s3", {"status": "available", "resources": {}})
 
-        client.get("/api/stats?endpoint=http://endpoint-a:4566")
+        client.get("/api/stats?endpoint=epa")
         cache_key = mock_cache.get.call_args[0][0]
         assert "http://endpoint-a:4566" in cache_key
 
@@ -118,10 +144,10 @@ class TestCacheKeyIsolation:
         mock_cache.get.return_value = None
         mock_probe.return_value = ("s3", {"status": "available", "resources": {}})
 
-        client.get("/api/stats?endpoint=http://endpoint-a:4566")
+        client.get("/api/stats?endpoint=epa")
         key_a = mock_cache.get.call_args[0][0]
 
-        client.get("/api/stats?endpoint=http://endpoint-b:4566")
+        client.get("/api/stats?endpoint=epb")
         key_b = mock_cache.get.call_args[0][0]
 
         assert key_a != key_b
@@ -146,7 +172,7 @@ class TestS3EndpointParam:
         mock_get_client.return_value = mock_s3
         mock_s3.list_buckets.return_value = {"Buckets": []}
 
-        client.get("/api/s3/buckets?endpoint=http://other:4566")
+        client.get("/api/s3/buckets?endpoint=other")
         mock_get_client.assert_called_with("s3", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
     @patch("backend.routes.s3.get_client")
@@ -157,7 +183,7 @@ class TestS3EndpointParam:
         mock_s3.get_paginator.return_value = paginator
         paginator.paginate.return_value = [{"CommonPrefixes": [], "Contents": []}]
 
-        client.get("/api/s3/buckets/test-bucket/objects?endpoint=http://other:4566")
+        client.get("/api/s3/buckets/test-bucket/objects?endpoint=other")
         mock_get_client.assert_called_with("s3", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
 
@@ -170,7 +196,7 @@ class TestDynamoDBEndpointParam:
         mock_get_client.return_value = mock_ddb
         mock_ddb.list_tables.return_value = {"TableNames": []}
 
-        client.get("/api/dynamodb/tables?endpoint=http://other:4566")
+        client.get("/api/dynamodb/tables?endpoint=other")
         mock_get_client.assert_called_with("dynamodb", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
 
@@ -183,7 +209,7 @@ class TestSQSEndpointParam:
         mock_get_client.return_value = mock_sqs
         mock_sqs.list_queues.return_value = {}
 
-        client.get("/api/sqs/queues?endpoint=http://other:4566")
+        client.get("/api/sqs/queues?endpoint=other")
         mock_get_client.assert_called_with("sqs", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
 
@@ -196,7 +222,7 @@ class TestLambdaEndpointParam:
         mock_get_client.return_value = mock_lambda
         mock_lambda.list_functions.return_value = {"Functions": []}
 
-        client.get("/api/lambda/functions?endpoint=http://other:4566")
+        client.get("/api/lambda/functions?endpoint=other")
         mock_get_client.assert_called_with("lambda", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
 
@@ -209,7 +235,7 @@ class TestIAMEndpointParam:
         mock_get_client.return_value = mock_iam
         mock_iam.list_roles.return_value = {"Roles": []}
 
-        client.get("/api/iam/roles?endpoint=http://other:4566")
+        client.get("/api/iam/roles?endpoint=other")
         mock_get_client.assert_called_with("iam", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
 
@@ -222,7 +248,7 @@ class TestEC2EndpointParam:
         mock_get_client.return_value = mock_ec2
         mock_ec2.describe_instances.return_value = {"Reservations": []}
 
-        client.get("/api/ec2/instances?endpoint=http://other:4566")
+        client.get("/api/ec2/instances?endpoint=other")
         mock_get_client.assert_called_with("ec2", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
 
@@ -235,7 +261,7 @@ class TestLogsEndpointParam:
         mock_get_client.return_value = mock_logs
         mock_logs.describe_log_groups.return_value = {"logGroups": []}
 
-        client.get("/api/logs/groups?endpoint=http://other:4566")
+        client.get("/api/logs/groups?endpoint=other")
         mock_get_client.assert_called_with("logs", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
 
@@ -248,7 +274,7 @@ class TestSecretsManagerEndpointParam:
         mock_get_client.return_value = mock_sm
         mock_sm.list_secrets.return_value = {"SecretList": []}
 
-        client.get("/api/secretsmanager/secrets?endpoint=http://other:4566")
+        client.get("/api/secretsmanager/secrets?endpoint=other")
         mock_get_client.assert_called_with("secretsmanager", endpoint_url="http://other:4566", region=None, auth_type="default", auth_profile=None, auth_access_key_id=None, auth_secret_access_key=None)
 
 
