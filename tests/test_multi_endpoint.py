@@ -14,8 +14,8 @@ def client():
     return TestClient(app)
 
 
-# Um nome tem de estar configurado para ser enderecavel: uma URL vinda da query
-# string nao resolve mais, senao qualquer chamador escolheria o destino.
+# A name has to be configured to be addressable: a URL coming from the query
+# string no longer resolves, otherwise any caller could pick the target.
 _NAMED_ENDPOINTS = {
     "other": "http://other:4566",
     "awsreal": "https://s3.amazonaws.com",
@@ -24,24 +24,43 @@ _NAMED_ENDPOINTS = {
 }
 
 
+def _live_stores():
+    """Every endpoint_store a backend module is holding.
+
+    test_endpoints.py reloads backend.config, which rebinds endpoint_store
+    there while the route modules keep the object they imported. Registering on
+    all of them reaches whichever one resolution actually goes through.
+    """
+    import sys
+
+    return {
+        id(store): store
+        for name, module in list(sys.modules.items())
+        if name.startswith("backend.") and (store := getattr(module, "endpoint_store", None)) is not None
+    }.values()
+
+
 @pytest.fixture(autouse=True)
 def named_endpoints():
-    from backend.config import endpoint_store
+    stores = list(_live_stores())
+    assert stores, "no endpoint_store bound; the fixture would be a no-op"
 
-    entries = endpoint_store._config["endpoints"]
-    for name, url in _NAMED_ENDPOINTS.items():
-        entries[name] = {
-            "url": url,
-            "source": "user",
-            "region": None,
-            "auth_type": "default",
-            "auth_profile": None,
-            "auth_access_key_id": None,
-            "auth_secret_access_key": None,
-        }
+    for store in stores:
+        entries = store._config["endpoints"]
+        for name, url in _NAMED_ENDPOINTS.items():
+            entries[name] = {
+                "url": url,
+                "source": "user",
+                "region": None,
+                "auth_type": "default",
+                "auth_profile": None,
+                "auth_access_key_id": None,
+                "auth_secret_access_key": None,
+            }
     yield
-    for name in _NAMED_ENDPOINTS:
-        entries.pop(name, None)
+    for store in stores:
+        for name in _NAMED_ENDPOINTS:
+            store._config["endpoints"].pop(name, None)
 
 
 class TestGetEndpointUrlDependency:
