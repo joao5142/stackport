@@ -1323,3 +1323,66 @@ export interface KMSKeyAlias {
   aliasArn: string
   creationDate?: string
 }
+
+// --- API Gateway ---
+
+export interface APIGatewayRestApi {
+  id: string
+  name?: string
+  description?: string
+  createdDate?: string
+}
+
+export interface APIGatewayTreeNode {
+  id: string
+  parentId: string | null
+  path: string
+  pathPart: string
+  methods: string[]
+  children: APIGatewayTreeNode[]
+}
+
+export interface APIGatewayTreeResponse {
+  tree: APIGatewayTreeNode[]
+  resourceCount: number
+  methodCount: number
+}
+
+export interface APIGatewayMethodDetail {
+  method: Record<string, unknown>
+  integration: Record<string, unknown> | null
+}
+
+export interface APIGatewayHttpApi {
+  ApiId: string
+  Name?: string
+  ProtocolType?: string
+  ApiEndpoint?: string
+}
+
+export interface APIGatewayRouteMethod {
+  routeId: string
+  method: string
+  routeKey: string
+  authorizationType: string
+  authorizerId: string | null
+  target: string | null
+}
+
+export interface APIGatewayRouteNode {
+  segment: string
+  path: string
+  methods: APIGatewayRouteMethod[]
+  children: APIGatewayRouteNode[]
+}
+
+export interface APIGatewayRoutesResponse {
+  tree: APIGatewayRouteNode[]
+  routeCount: number
+}
+
+export interface APIGatewayRouteDetail {
+  route: Record<string, unknown>
+  integration: Record<string, unknown> | null
+  authorizer: Record<string, unknown> | null
+}

@@ -96,7 +96,13 @@ import type {
   KMSKey,
   KMSKeyDetail,
   KMSKeyGrant,
-  KMSKeyAlias
+  KMSKeyAlias,
+  APIGatewayRestApi,
+  APIGatewayTreeResponse,
+  APIGatewayMethodDetail,
+  APIGatewayHttpApi,
+  APIGatewayRoutesResponse,
+  APIGatewayRouteDetail,
 } from './types'
 
 const API_BASE = '/api'
@@ -1485,4 +1491,49 @@ export async function fetchKMSKeyGrants(id: string, endpoint?: string | null): P
 
 export async function fetchKMSKeyAliases(id: string, endpoint?: string | null): Promise<KMSKeyAlias[]> {
   return fetchJSON<KMSKeyAlias[]>(buildUrl(`/kms/keys/${encodeURIComponent(id)}/aliases`, endpoint))
+}
+
+// --- API Gateway ---
+
+export async function fetchRestApis(endpoint?: string | null) {
+  return fetchJSON<{ items: APIGatewayRestApi[] }>(buildUrl('/apigateway/rest-apis', endpoint))
+}
+
+export async function fetchRestApiTree(apiId: string, endpoint?: string | null) {
+  return fetchJSON<APIGatewayTreeResponse>(
+    buildUrl(`/apigateway/rest-apis/${encodeURIComponent(apiId)}/tree`, endpoint)
+  )
+}
+
+export async function fetchRestMethod(
+  apiId: string,
+  resourceId: string,
+  httpMethod: string,
+  endpoint?: string | null
+) {
+  return fetchJSON<APIGatewayMethodDetail>(
+    buildUrl(
+      `/apigateway/rest-apis/${encodeURIComponent(apiId)}/resources/${encodeURIComponent(resourceId)}/methods/${encodeURIComponent(httpMethod)}`,
+      endpoint
+    )
+  )
+}
+
+export async function fetchHttpApis(endpoint?: string | null) {
+  return fetchJSON<{ items: APIGatewayHttpApi[] }>(buildUrl('/apigateway/apis', endpoint))
+}
+
+export async function fetchHttpRoutes(apiId: string, endpoint?: string | null) {
+  return fetchJSON<APIGatewayRoutesResponse>(
+    buildUrl(`/apigateway/apis/${encodeURIComponent(apiId)}/routes`, endpoint)
+  )
+}
+
+export async function fetchHttpRoute(apiId: string, routeId: string, endpoint?: string | null) {
+  return fetchJSON<APIGatewayRouteDetail>(
+    buildUrl(
+      `/apigateway/apis/${encodeURIComponent(apiId)}/routes/${encodeURIComponent(routeId)}`,
+      endpoint
+    )
+  )
 }
