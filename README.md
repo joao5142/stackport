@@ -264,6 +264,7 @@ Press `?` anywhere to see all shortcuts.
 | `STACKPORT_ALLOW_WRITES` | `true` | Enable write operations (POST/PUT/DELETE) |
 | `STACKPORT_S3_MAX_UPLOAD_MB` | `100` | Max S3 upload size per object (MiB) |
 | `STACKPORT_LEARN` | `true` | Guided tutorials. `false` removes the Learn routes and UI |
+| `STACKPORT_CORS_ORIGINS` | *(unset)* | Origins allowed to call the API cross-site. Unset = none, since the UI is served from this same origin. `*` allows any |
 | `STACKPORT_SERVICES` | *(35 services)* | Comma-separated list of services to probe |
 | `STACKPORT_PROBE_TIMEOUT` | `5` | Seconds before a service probe times out |
 | `STACKPORT_CACHE_TTL` | `5` | Seconds to cache service stats |

@@ -16,7 +16,7 @@ from botocore.exceptions import (
     UnauthorizedSSOTokenError,
 )
 
-from backend.config import LOG_LEVEL, STACKPORT_ALLOW_WRITES, STACKPORT_LEARN, STACKPORT_PORT
+from backend.config import LOG_LEVEL, STACKPORT_ALLOW_WRITES, STACKPORT_CORS_ORIGINS, STACKPORT_LEARN, STACKPORT_PORT
 from backend.routes import apigateway, dynamodb, ec2, endpoints, iam, lambda_svc, learn, logs, monitoring, resources, rds, s3, secretsmanager, sns, sqs, stats, stepfunctions, tags, kms
 from backend.websocket import logs_tail_endpoint, probe_loop, websocket_endpoint
 
@@ -51,12 +51,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="StackPort", docs_url="/api/docs", lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# With no origins declared there is no CORS: the UI calls /api on its own origin,
+# and the vite dev server proxies. Opening it to any site would give every tab in
+# the browser read and write access to this API, which has no authentication.
+if STACKPORT_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=STACKPORT_CORS_ORIGINS,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 class ReadOnlyMiddleware(BaseHTTPMiddleware):

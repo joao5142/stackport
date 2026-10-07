@@ -5,17 +5,40 @@ import functools
 import json
 import logging
 import time
+from urllib.parse import urlparse
 
 from fastapi import WebSocket, WebSocketDisconnect
 
 from backend.aws_client import get_client
-from backend.config import endpoint_store, STACKPORT_SERVICES
+from backend.config import endpoint_store, STACKPORT_CORS_ORIGINS, STACKPORT_SERVICES
 from backend.routes.logs import _epoch_millis_to_iso
 from backend.routes.stats import _probe_service, _start_time
 
 logger = logging.getLogger(__name__)
 
 TAIL_POLL_SECONDS = 1.0
+
+# Close code for a rejected handshake (policy violation).
+_WS_POLICY_VIOLATION = 1008
+
+
+async def _reject_foreign_origin(websocket: WebSocket) -> bool:
+    """Close the socket when the handshake comes from another site.
+
+    The browser does not apply CORS to WebSocket, so a page on any origin can
+    open this socket unless the Origin is checked here. Requests without an
+    Origin header are not from a browser (CLI, tests) and are left alone.
+    """
+    origin = websocket.headers.get("origin")
+    if not origin:
+        return False
+    if "*" in STACKPORT_CORS_ORIGINS or origin in STACKPORT_CORS_ORIGINS:
+        return False
+    if urlparse(origin).netloc == websocket.headers.get("host"):
+        return False
+    logger.warning("Rejected WebSocket handshake from origin %s", origin)
+    await websocket.close(code=_WS_POLICY_VIOLATION)
+    return True
 
 
 class ConnectionManager:
@@ -128,6 +151,8 @@ def _resolve_endpoint(name_or_url: str | None) -> str | None:
 
 async def websocket_endpoint(websocket: WebSocket):
     """Handle a single WebSocket connection."""
+    if await _reject_foreign_origin(websocket):
+        return
     await manager.connect(websocket)
     try:
         while True:
@@ -220,6 +245,8 @@ async def logs_tail_endpoint(websocket: WebSocket):
     The server then polls the emulator and pushes {"type": "events", "data": {"events": [...]}}
     batches until the client sends {"type": "stop"} or disconnects.
     """
+    if await _reject_foreign_origin(websocket):
+        return
     await websocket.accept()
     try:
         raw = await websocket.receive_text()

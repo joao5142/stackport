@@ -26,6 +26,11 @@ STACKPORT_SERVICES: str = os.environ.get(
     "ecr,elasticache,glue,athena,apigateway,firehose,cognito-idp,cognito-identity,"
     "elasticmapreduce,elasticloadbalancing,elasticfilesystem,cloudfront,appsync",
 )
+# Origins allowed to call the API cross-site. The UI is served by this same
+# application, so normal use needs none. "*" opens it to everything.
+STACKPORT_CORS_ORIGINS: list[str] = [
+    o.strip() for o in os.environ.get("STACKPORT_CORS_ORIGINS", "").split(",") if o.strip()
+]
 LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 # Probe and cache configuration
