@@ -429,7 +429,7 @@ export function CloudscapeMonitoringBrowser() {
   const dashboards = dashboardsData?.dashboards ?? []
 
   if (selectedDashboard) {
-    return <DashboardView name={selectedDashboard} onBack={() => setSearchParams({})} />
+    return <DashboardView name={selectedDashboard} onBack={() => setSearchParams({}, { replace: true })} />
   }
 
   return (

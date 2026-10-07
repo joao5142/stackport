@@ -606,7 +606,7 @@ export function CloudscapeSNSBrowser() {
 
   const openTopic = useCallback((arn: string) => setSearchParams({ topic: arn }), [setSearchParams])
   const backToList = useCallback(() => {
-    setSearchParams({})
+    setSearchParams({}, { replace: true })
     refresh()
   }, [setSearchParams, refresh])
 

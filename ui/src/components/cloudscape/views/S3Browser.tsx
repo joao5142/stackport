@@ -698,7 +698,7 @@ function ObjectBrowser({ bucket, prefix }: { bucket: string; prefix: string }) {
   return (
     <SpaceBetween size="m">
       <SpaceBetween direction="horizontal" size="xs">
-        <Button iconName="arrow-left" onClick={() => setSearchParams({})} ariaLabel="Back to buckets">
+        <Button iconName="arrow-left" onClick={() => setSearchParams({}, { replace: true })} ariaLabel="Back to buckets">
           Buckets
         </Button>
         <BreadcrumbGroup

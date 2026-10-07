@@ -671,7 +671,7 @@ export function CloudscapeDynamoDBBrowser() {
 
   const openTable = useCallback((name: string) => setSearchParams({ table: name }), [setSearchParams])
   const backToList = useCallback(() => {
-    setSearchParams({})
+    setSearchParams({}, { replace: true })
     refresh()
   }, [setSearchParams, refresh])
 

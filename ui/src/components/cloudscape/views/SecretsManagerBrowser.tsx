@@ -525,7 +525,7 @@ export function CloudscapeSecretsManagerBrowser() {
 
   const openSecret = useCallback((name: string) => setSearchParams({ secret: name }), [setSearchParams])
   const backToList = useCallback(() => {
-    setSearchParams({})
+    setSearchParams({}, { replace: true })
     refresh()
   }, [setSearchParams, refresh])
 

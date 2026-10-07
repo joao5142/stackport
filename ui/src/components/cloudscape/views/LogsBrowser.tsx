@@ -845,12 +845,12 @@ export function CloudscapeLogsBrowser() {
   const currentGroup = groups.find((g) => g.name === selectedGroup)
 
   const openGroup = (name: string | null) => {
-    if (name === null) setSearchParams({})
+    if (name === null) setSearchParams({}, { replace: true })
     else setSearchParams({ group: name })
   }
   const openStream = (name: string | null) => {
     if (!selectedGroup) return
-    if (name === null) setSearchParams({ group: selectedGroup })
+    if (name === null) setSearchParams({ group: selectedGroup }, { replace: true })
     else setSearchParams({ group: selectedGroup, stream: name })
   }
 

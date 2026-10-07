@@ -660,7 +660,7 @@ export function CloudscapeStepFunctionsBrowser() {
   })
 
   if (selectedMachineArn) {
-    return <StateMachineDetail arn={selectedMachineArn} onBack={() => setSearchParams({})} />
+    return <StateMachineDetail arn={selectedMachineArn} onBack={() => setSearchParams({}, { replace: true })} />
   }
 
   return (

@@ -426,7 +426,7 @@ export function CloudscapeIAMBrowser() {
     (type: EntityType, name: string) => setSearchParams({ type, name }),
     [setSearchParams],
   )
-  const closeEntity = useCallback(() => setSearchParams({}), [setSearchParams])
+  const closeEntity = useCallback(() => setSearchParams({}, { replace: true }), [setSearchParams])
 
   const entityLink = useCallback(
     (type: EntityType, name: string, label?: string) => (
