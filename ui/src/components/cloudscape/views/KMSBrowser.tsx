@@ -282,7 +282,7 @@ export function CloudscapeKMSBrowser() {
     sorting: {},
   })
 
-  const closeModal = useCallback(() => setSearchParams({}), [setSearchParams])
+  const closeModal = useCallback(() => setSearchParams({}, { replace: true }), [setSearchParams])
 
   return (
     <SpaceBetween size='l'>

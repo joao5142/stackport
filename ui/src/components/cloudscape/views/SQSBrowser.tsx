@@ -1369,7 +1369,7 @@ export function CloudscapeSQSBrowser() {
     [setSearchParams],
   )
   const backToList = useCallback(() => {
-    setSearchParams({})
+    setSearchParams({}, { replace: true })
     refresh()
   }, [setSearchParams, refresh])
 

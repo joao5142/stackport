@@ -608,7 +608,7 @@ export function CloudscapeLambdaBrowser() {
 
   const openFunction = useCallback((name: string) => setSearchParams({ function: name }), [setSearchParams])
   const backToList = useCallback(() => {
-    setSearchParams({})
+    setSearchParams({}, { replace: true })
     refresh()
   }, [setSearchParams, refresh])
 

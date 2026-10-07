@@ -404,7 +404,7 @@ export function CloudscapeRDSBrowser() {
     (params: Record<string, string>) => setSearchParams(params),
     [setSearchParams],
   )
-  const closeDetail = useCallback(() => setSearchParams({}), [setSearchParams])
+  const closeDetail = useCallback(() => setSearchParams({}, { replace: true }), [setSearchParams])
 
   const refreshAll = useCallback(() => {
     refreshInstances()
