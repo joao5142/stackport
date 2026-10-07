@@ -438,15 +438,21 @@ class TestResolve:
     The resolve() method is used in backend/routes/common.py get_endpoint_url().
     """
 
-    def test_resolve_direct_url_passthrough(self, temp_json_path, env_endpoints):
-        """Test that direct URLs are returned as-is."""
+    def test_resolve_rejects_direct_url(self, temp_json_path, env_endpoints):
+        """A caller-supplied URL must not be honoured: it would be an SSRF."""
+        store = EndpointStore(temp_json_path, env_endpoints)
+        default = store.get_default_url()
+
+        assert store.resolve("http://direct:9999") == default
+        assert store.resolve("https://direct.example.com") == default
+        assert store.resolve_with_region("http://direct:9999") == (default, None)
+        assert store.resolve_full("http://direct:9999") == store.get(store.get_default_name())
+
+    def test_resolve_known_name(self, temp_json_path, env_endpoints):
+        """Configured names still resolve."""
         store = EndpointStore(temp_json_path, env_endpoints)
 
-        http_url = "http://direct:9999"
-        https_url = "https://direct.example.com"
-
-        assert store.resolve(http_url) == http_url
-        assert store.resolve(https_url) == https_url
+        assert store.resolve("moto") == "http://localhost:5000"
 
 
 class TestGetDefaultUrl:
