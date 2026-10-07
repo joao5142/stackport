@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useCollection } from '@cloudscape-design/collection-hooks'
 import Alert from '@cloudscape-design/components/alert'
 import AttributeEditor from '@cloudscape-design/components/attribute-editor'
 import Badge from '@cloudscape-design/components/badge'
+import BreadcrumbGroup from '@cloudscape-design/components/breadcrumb-group'
 import Box from '@cloudscape-design/components/box'
 import Button from '@cloudscape-design/components/button'
 import ButtonDropdown from '@cloudscape-design/components/button-dropdown'
@@ -416,6 +417,7 @@ function ServicePicker({ stats, onSelect }: { stats: StatsResponse | null; onSel
 export default function CloudscapeResourceBrowser() {
   const navigate = useNavigate()
   const { service } = useParams<{ service?: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { activeEndpoint } = useEndpoint()
   const [detail, setDetail] = useState<{ resourceType: string; id: string } | null>(null)
 
@@ -457,10 +459,39 @@ export default function CloudscapeResourceBrowser() {
 
   const CustomView = service ? CLOUDSCAPE_SERVICE_VIEWS[service] : undefined
 
+  const selected = useMemo(() => {
+    for (const [key, value] of searchParams.entries()) {
+      if (key === 'type' || !value) continue
+      // An ARN is shortened to its last segment, the way the console does.
+      return value.startsWith('arn:') ? value.split(/[:/]/).pop() || value : value
+    }
+    return null
+  }, [searchParams])
+
+  const breadcrumbs = (
+    <BreadcrumbGroup
+      ariaLabel="Breadcrumbs"
+      items={[
+        { text: 'Resources', href: '/resources' },
+        ...(service ? [{ text: service, href: `/resources/${service}` }] : []),
+        ...(selected ? [{ text: selected, href: '#' }] : []),
+      ]}
+      onFollow={(e) => {
+        e.preventDefault()
+        const href = e.detail.href
+        if (href === '#') return
+        // Going back to the service only clears the open resource; the list is mounted.
+        if (service && href === `/resources/${service}`) setSearchParams({}, { replace: true })
+        else navigate(href)
+      }}
+    />
+  )
+
   return (
     <CloudscapeShell
       activeHref={service ? `/resources/${service}` : '/resources'}
       extraNavItems={servicesNav}
+      breadcrumbs={breadcrumbs}
     >
       <ContentLayout
         header={

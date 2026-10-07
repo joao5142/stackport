@@ -43,10 +43,12 @@ const LEARN_DRAWER_ID = 'learn'
 export function CloudscapeShell({
   activeHref,
   extraNavItems = [],
+  breadcrumbs,
   children,
 }: {
   activeHref: string
   extraNavItems?: SideNavigationProps.Item[]
+  breadcrumbs?: ReactNode
   children: ReactNode
 }) {
   const navigate = useNavigate()
@@ -206,6 +208,7 @@ export function CloudscapeShell({
       </div>
       <CloudscapeShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <AppLayout
+        breadcrumbs={breadcrumbs}
         {...(learnEnabled
           ? {
               drawers: [
